@@ -8,4 +8,6 @@
 - (void)showOverlay:(NSDictionary *)params;
 - (void)removeOverlay;
 
+@property (nonatomic) BOOL tabBarHidden;
+
 @end

@@ -10,7 +10,7 @@ const resolveAssetSource = require('react-native/Libraries/Image/resolveAssetSou
 
 import * as newPlatformSpecific from './../platformSpecific';
 
-function startSingleScreenApp(params) {
+async function startSingleScreenApp(params) {
   const screen = params.screen;
   if (!screen.screen) {
     console.error('startSingleScreenApp(params): screen must include a screen property');
@@ -37,10 +37,10 @@ function startSingleScreenApp(params) {
   params.animateShow = convertAnimationType(params.animationType);
 
   if (params.overlay) {
-    params.overlay = createOverlay(params.overlay)
+    params.overlay = createOverlay(params.overlay);
   }
 
-  newPlatformSpecific.startApp(params);
+  return await newPlatformSpecific.startApp(params);
 }
 
 function getOrientation(params) {
@@ -84,6 +84,12 @@ function navigatorPush(navigator, params) {
   adapted = adaptNavigationParams(adapted);
   adapted.overrideBackPress = params.overrideBackPress;
   adapted.timestamp = Date.now();
+  if (!adapted.passProps) {
+    adapted.passProps = {};
+  }
+  if (!adapted.passProps.commandType) {
+    adapted.passProps.commandType = 'Push';
+  }
 
   return newPlatformSpecific.push(adapted);
 }
@@ -147,6 +153,7 @@ function convertStyleParams(originalStyleObject) {
     statusBarColor: processColor(originalStyleObject.statusBarColor),
     statusBarHidden: originalStyleObject.statusBarHidden,
     statusBarTextColorScheme: originalStyleObject.statusBarTextColorScheme,
+    drawUnderStatusBar: originalStyleObject.drawUnderStatusBar || false,
     topBarReactView: originalStyleObject.navBarCustomView,
     topBarReactViewAlignment: originalStyleObject.navBarComponentAlignment,
     topBarReactViewInitialProps: originalStyleObject.navBarCustomViewInitialProps,
@@ -178,6 +185,7 @@ function convertStyleParams(originalStyleObject) {
     titleBarTitleFontBold: originalStyleObject.navBarTextFontBold,
     titleBarTitleTextCentered: originalStyleObject.navBarTitleTextCentered,
     titleBarHeight: originalStyleObject.navBarHeight,
+    titleBarTopPadding: originalStyleObject.navBarTopPadding,
     backButtonHidden: originalStyleObject.backButtonHidden,
     topTabsHidden: originalStyleObject.topTabsHidden,
     contextualMenuStatusBarColor: processColor(originalStyleObject.contextualMenuStatusBarColor),
@@ -187,6 +195,7 @@ function convertStyleParams(originalStyleObject) {
     drawBelowTopBar: !originalStyleObject.drawUnderNavBar,
 
     topTabTextColor: processColor(originalStyleObject.topTabTextColor),
+    topTabTextFontFamily: originalStyleObject.topTabTextFontFamily,
     topTabIconColor: processColor(originalStyleObject.topTabIconColor),
     selectedTopTabIconColor: processColor(originalStyleObject.selectedTopTabIconColor),
     selectedTopTabTextColor: processColor(originalStyleObject.selectedTopTabTextColor),
@@ -232,7 +241,7 @@ function convertStyleParams(originalStyleObject) {
   if (ret.topBarReactViewInitialProps) {
     const passPropsKey = _.uniqueId('customNavBarComponent');
     PropRegistry.save(passPropsKey, ret.topBarReactViewInitialProps);
-    ret.topBarReactViewInitialProps = {passPropsKey};  
+    ret.topBarReactViewInitialProps = {passPropsKey};
   }
   return ret;
 }
@@ -265,11 +274,17 @@ function convertDrawerParamsToSideMenuParams(drawerParams) {
       result[key] = adaptNavigationParams(result[key]);
       result[key].passProps = drawer[key].passProps;
       if (drawer.disableOpenGesture) {
-        result[key].disableOpenGesture = drawer.disableOpenGesture;
+        result[key].disableOpenGesture = parseInt(drawer.disableOpenGesture);
       } else {
-        result[key].disableOpenGesture = drawer[key].disableOpenGesture;
+        let fixedWidth = drawer[key].disableOpenGesture;
+        result[key].disableOpenGesture = fixedWidth ? parseInt(fixedWidth) : null;
       }
-      
+      if (drawer.fixedWidth) {
+        result[key].fixedWidth = drawer.fixedWidth;
+      } else {
+        result[key].fixedWidth = drawer[key].fixedWidth;
+      }
+
     } else {
       result[key] = null;
     }
@@ -287,7 +302,7 @@ function adaptNavigationParams(screen) {
   return screen;
 }
 
-function startTabBasedApp(params) {
+async function startTabBasedApp(params) {
   if (!params.tabs) {
     console.error('startTabBasedApp(params): params.tabs is required');
     return;
@@ -325,7 +340,7 @@ function startTabBasedApp(params) {
   params.sideMenu = convertDrawerParamsToSideMenuParams(params.drawer);
   params.animateShow = convertAnimationType(params.animationType);
 
-  newPlatformSpecific.startApp(params);
+  return await newPlatformSpecific.startApp(params);
 }
 
 function addTabIcon(tab) {
@@ -489,6 +504,12 @@ function showModal(params) {
   adapted = adaptNavigationParams(adapted);
   adapted.overrideBackPress = params.overrideBackPress;
   adapted.timestamp = Date.now();
+  if (!adapted.passProps) {
+    adapted.passProps = {};
+  }
+  if (!adapted.passProps.commandType) {
+    adapted.passProps.commandType = 'ShowModal';
+  }
 
   newPlatformSpecific.showModal(adapted);
 }
